@@ -32,57 +32,51 @@ public class TestChatbotServer {
   }
 
   @Test
-  public void testChatbotServer () {
+  public void testChatbotServer () throws IOException {
+    OutputStream dout = new ByteArrayOutputStream();
+    InputStream din = new ByteArrayInputStream("CALL\nCALL\n".getBytes());
+
+    when(mockServerSocket.accept()).thenReturn(mockSocket);
+    when(mockSocket.getInputStream()).thenReturn(din);
+    when(mockSocket.getOutputStream()).thenReturn(dout);
     try {
-      OutputStream dout = new ByteArrayOutputStream();
-      InputStream din = new ByteArrayInputStream("CALL\nCALL\n".getBytes());
-
-      when(mockServerSocket.accept()).thenReturn(mockSocket);
-      when(mockSocket.getInputStream()).thenReturn(din);
-      when(mockSocket.getOutputStream()).thenReturn(dout);
-      try {
-        when(mockBot.getResponse("CALL")).thenReturn("RESPONSE");
-      } catch (AIException aie) {
-        System.err.println(aie);
-      }
-
-      chatServer.handleOneClient();
-
-      BufferedReader buffed = new BufferedReader(new StringReader(dout.toString()));
-      String line;
-      do {
-        line = buffed.readLine();
-        if (line.equals("null"))
-          break;
-
-        assertEquals("RESPONSE", line);
-      } while (true);
-
-    } catch (IOException ioe) {
-      System.err.println(ioe);
+      when(mockBot.getResponse("CALL")).thenReturn("RESPONSE");
+    } catch (AIException aie) {
+      System.err.println(aie);
     }
+
+    chatServer.handleOneClient();
+
+    BufferedReader buffed = new BufferedReader(new StringReader(dout.toString()));
+    String line;
+    do {
+      line = buffed.readLine();
+      if (line.equals("null"))
+        break;
+
+      assertEquals("RESPONSE", line);
+    } while (true);
   }
 
   @Test
-  public void testAIException () throws AIException {
+  public void testAIException () throws IOException {
+    OutputStream dout = new ByteArrayOutputStream();
+    InputStream din = new ByteArrayInputStream("ERROR\n".getBytes());
+
+    when(mockServerSocket.accept()).thenReturn(mockSocket);
+    when(mockSocket.getOutputStream()).thenReturn(dout);
+    when(mockSocket.getInputStream()).thenReturn(din);
+
     try {
-      OutputStream dout = new ByteArrayOutputStream();
-      InputStream din = new ByteArrayInputStream("ERROR\n".getBytes());
-
-      when(mockServerSocket.accept()).thenReturn(mockSocket);
-      when(mockSocket.getOutputStream()).thenReturn(dout);
-      when(mockSocket.getInputStream()).thenReturn(din);
-      when(mockBot.getResponse("ERROR")).thenThrow(AIException.class);
       doThrow(new AIException("BROKEN AI")).when(mockBot).getResponse("ERROR");
-
-      chatServer.handleOneClient();
-
-      BufferedReader buffed = new BufferedReader(new StringReader(dout.toString()));
-      assertEquals("Got AIException: <BROKEN AI>", buffed.readLine());
-
-    } catch (IOException ioe) {
-      System.err.println(ioe);
+    } catch (AIException aie){
+      System.err.println(aie);
     }
+
+    chatServer.handleOneClient();
+
+    BufferedReader buffed = new BufferedReader(new StringReader(dout.toString()));
+    assertEquals("Got AIException: <BROKEN AI>", buffed.readLine());
   }
 
   @Test
@@ -94,7 +88,6 @@ public class TestChatbotServer {
     }
 
     chatServer.handleOneClient();
-
   }
 
 }
